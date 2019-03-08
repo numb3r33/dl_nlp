@@ -1,0 +1,2 @@
+MIN_COUNT    = 5
+WINDOW_SIZE  = 2
