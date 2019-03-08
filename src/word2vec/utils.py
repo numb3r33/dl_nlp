@@ -1,22 +1,21 @@
 from nltk.tokenize import word_tokenize
 from collections import Counter
 
+import random
+import numpy as np
 import config
+import math
+
+from sklearn.metrics.pairwise import cosine_similarity
 
 def read_data(path):
-    """
-    Description of what the function does
-    input args
-    output args
-    """
-    
     text = ''
 
     with open(path, 'r') as infile:
         for row in infile.readlines():
             text += row
     
-    return text[:10000]
+    return text[:100000]
 
 
 def clean(text):
@@ -96,3 +95,15 @@ def make_skip_gram_batchs_iter(contexts, window_size, num_skips, batch_size):
             batch_labels.extend(words_to_use)
         
         yield batch_data, batch_labels
+
+
+def get_embedding(model):
+    return model[0].weight.cpu().detach().numpy()
+
+def most_similar(embeddings, index2word, word2index, word):
+    word_emb = embeddings[word2index[word]]
+
+    sim = cosine_similarity([word_emb], embeddings)[0]
+    top10 = np.argsort(sim)[-10:]
+
+    return [index2word[index] for index in reversed(top10)]
