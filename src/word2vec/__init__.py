@@ -19,6 +19,8 @@ def main(data_path):
     embeddings = get_embedding(model)
     print(most_similar(embeddings, index2word, word2index, config.WORD))
 
+    visualize_embeddings(embeddings, index2word, config.SAMPLE)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Word2Vec Processing')
 

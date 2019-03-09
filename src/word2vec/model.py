@@ -11,3 +11,8 @@ def create_model(V):
             ).cuda()
 
     return model
+
+def create_model_v2(V):
+    model = nn.Sequential(nn.Embedding(V, config.EMBEDDING_SIZE)).cuda()
+
+    return model

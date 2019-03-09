@@ -6,3 +6,6 @@ NUM_SKIPS     = 2
 BATCH_SIZE    = 2 ** 2
 EMBEDDING_SIZE = 32
 WORD           = 'eight'
+SAMPLE         = 1000
+PROJECTION_FILE= '../../references/tsne_projection.png'
+
