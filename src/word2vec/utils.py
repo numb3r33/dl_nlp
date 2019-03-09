@@ -107,3 +107,14 @@ def most_similar(embeddings, index2word, word2index, word):
     top10 = np.argsort(sim)[-10:]
 
     return [index2word[index] for index in reversed(top10)]
+
+def get_pw(word2index):
+    factor = 0
+
+    for k, v in word2index.items():
+        factor += (v ** config.UNIGRAM_POWER)
+
+    factor = 1 / factor
+    p_w    = {k: (v ** config.UNIGRAM_POWER) * factor for k,v in word2index.items()}
+
+    return p_w
