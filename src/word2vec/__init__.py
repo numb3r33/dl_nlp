@@ -3,7 +3,7 @@ import pandas as pd
 import argparse
 
 from utils import *
-from train import *\
+from train import *
 
 def main(data_path):
     text = read_data(data_path)
