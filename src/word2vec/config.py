@@ -1,9 +1,11 @@
 MIN_COUNT       = 5
 WINDOW_SIZE     = 2
 LEARNING_RATE   = .025
+BTT_LEARNING_RATE = 0.05
 LOGGING_STEPS   = 1000
 NUM_SKIPS       = 2
 BATCH_SIZE      = 2 ** 2
+BTT_BATCH_SIZE  = 2 ** 7
 EMBEDDING_SIZE  = 32
 WORD            = 'eight'
 SAMPLE          = 1000

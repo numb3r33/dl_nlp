@@ -15,7 +15,7 @@ def read_data(path):
         for row in infile.readlines():
             text += row
     
-    return text[:100000]
+    return text[:10000000]
 
 
 def clean(text):
@@ -118,3 +118,32 @@ def get_pw(word2index):
     p_w    = {k: (v ** config.UNIGRAM_POWER) * factor for k,v in word2index.items()}
 
     return p_w
+
+def make_skip_gram_batchs_iter_with_context(contexts, window_size, num_skips, batch_size):
+    assert batch_size % num_skips == 0
+    assert num_skips <= 2 * window_size
+        
+    central_words = [word for word, context in contexts if len(context) == 2 * window_size and word != 0]
+    contexts = [context for word, context in contexts if len(context) == 2 * window_size and word != 0]
+
+    batch_size   = int(batch_size / num_skips)
+    batchs_count = int(math.ceil(len(contexts) / batch_size))
+       
+    print('Initializing batchs generator with {} batchs per epoch'.format(batchs_count))
+    indices = np.arange(len(contexts))
+    np.random.shuffle(indices)
+    
+    for i in range(batchs_count):
+        batch_begin, batch_end = i * batch_size, min((i + 1) * batch_size, len(contexts))
+        batch_indices = indices[batch_begin: batch_end]
+
+        batch_data, batch_labels = [], []
+
+        for data_ind in batch_indices:
+            central_word, context = central_words[data_ind], contexts[data_ind]
+            words_to_use = random.sample(context, num_skips)
+           
+            batch_data.extend([words_to_use])
+            batch_labels.extend([central_word])
+        
+        yield batch_data, batch_labels

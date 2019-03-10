@@ -25,3 +25,22 @@ def vanilla_neg_sampling_loss(logits, labels, word2index, p_w):
     loss      = torch.sum(pos_sim + neg_sim)
 
     return loss
+
+def batch_transpose_trick_loss(center_word_repr, labels):
+    x = 0.0
+
+    for batch_index in range(len(center_word_repr)):
+        w = center_word_repr[batch_index, :, :]
+        x = x + torch.sum(torch.mm(w, torch.transpose(w, 1, 0)) - 1)
+
+    y = 0.0
+
+    for window_index in range(center_word_repr.shape[1]):
+        b = center_word_repr[:, window_index, :]
+        y = y + torch.sum(torch.mm(b, torch.transpose(b, 1, 0)))
+
+    loss = -x + y
+
+    return loss
+
+
