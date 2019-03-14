@@ -10,6 +10,12 @@ from model import *
 from visualization import *
 from losses import *
 
+# set seed
+SEED = 41
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
+
+
 def train_w2v(contexts, V, num_skips, batch_size):
     loss_every_nsteps = config.LOGGING_STEPS
     total_loss = 0
@@ -145,4 +151,48 @@ def train_w2v_batch_transpose_trick(contexts, V, num_skips, batch_size):
 
     return model
 
+def train_fasttext(contexts, V, num_skips, batch_size, ngram_hash, word_ngram_index, word2index, p_w):
+    loss_every_nsteps = config.LOGGING_STEPS
+    print('|V|: ', V)
+
+    start_time = time.time()
+    model      = SISG(V, ngram_hash).cuda()
+
+    lr         = config.FT_LEARNING_RATE
+    new_lr     = lr
+
+    print('Number of epochs: {}'.format(config.EPOCHS))
+
+    for epoch in range(config.EPOCHS):
+        print('EPOCH: {}'.format(epoch))
+        n_steps = 0
+        total_loss = 0
+
+        optimizer  = optim.Adam(model.parameters(), lr=new_lr)
+
+        print('Previous step lr: {}'.format(lr))
+        new_lr     = lr * (1 - (epoch/ (V * config.EPOCHS)))
+        print('Next step lr: {}'.format(new_lr))
+
+
+        for step, (batch, labels) in enumerate(make_skip_gram_batchs_iter_for_fasttext(contexts, config.WINDOW_SIZE, num_skips=num_skips, batch_size=batch_size, word_ngram_index=word_ngram_index)):
+            batch  = torch.cuda.LongTensor(batch)
+            labels = torch.cuda.LongTensor(labels)
+            logits = model(batch)
+
+
+            loss = fasttext_loss_fn(logits, labels, batch.shape[0], batch.shape[1], word2index, p_w)
+            loss.backward()
+
+            optimizer.step()
+            optimizer.zero_grad()
+
+            total_loss += loss.cpu().detach().item()
+            n_steps    += 1
+
+        print("Avg Loss = {:.4f}, Time = {:.2f}s".format(total_loss / n_steps,\
+                                                         time.time() - start_time))
+        start_time = time.time()   
+
+    return model
 

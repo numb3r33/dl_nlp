@@ -1,5 +1,6 @@
 from nltk.tokenize import word_tokenize
 from collections import Counter
+from collections import defaultdict
 
 import random
 import numpy as np
@@ -14,8 +15,8 @@ def read_data(path):
     with open(path, 'r') as infile:
         for row in infile.readlines():
             text += row
-    
-    return text[:10000000]
+
+    return text[:100000]
 
 
 def clean(text):
@@ -97,8 +98,8 @@ def make_skip_gram_batchs_iter(contexts, window_size, num_skips, batch_size):
         yield batch_data, batch_labels
 
 
-def get_embedding(model):
-    return model[0].weight.cpu().detach().numpy()
+def get_embedding(embedding):
+    return embedding.weight.cpu().detach().numpy()
 
 def most_similar(embeddings, index2word, word2index, word):
     word_emb = embeddings[word2index[word]]
@@ -107,6 +108,110 @@ def most_similar(embeddings, index2word, word2index, word):
     top10 = np.argsort(sim)[-10:]
 
     return [index2word[index] for index in reversed(top10)]
+
+def get_token_ngram(token):
+    ngrams = []
+    ngram_range = config.NGRAM_RANGE
+
+    if token == '<unk>':
+        ngrams.append(token)
+
+    token = '<' + token + '>'
+
+    for i in range(len(token) - ngram_range + 1):
+        ngrams.append(token[i:i+ngram_range])
+
+    ngrams.append(token)
+
+    return ngrams
+
+def get_query_word_embedding(word_embeddings, embeddings, word2index, ngram_hash, word):
+    if word in word2index:
+        return word_embeddings[word2index[word]]
+    else:
+        print()
+        print('Word not found in training')
+        ngrams = get_token_ngram(word)
+        q_emb  = np.zeros(shape=(config.EMBEDDING_SIZE, ))
+
+        for ng in ngrams:
+            if ng in ngram_hash:
+                q_emb += embeddings[ngram_hash[ng]]
+
+        return q_emb
+
+def most_similar_ft(embeddings, projection, ngram_hash, hash_ngram, word_ngram_index, word2index, index2word, word):
+    # create word embeddings out of character embeddings
+    word_embeddings = np.zeros(shape=(len(word_ngram_index.keys()), config.EMBEDDING_SIZE))
+
+    for index, k in enumerate(word_ngram_index.keys()):
+        word_embeddings[index, :] = np.sum(embeddings[word_ngram_index[k]], axis=0)
+
+    #word_emb = np.sum(embeddings[word_ngram_index[word2index[word]]], axis=0)
+    #word_emb  = word_embeddings[word2index[word]]
+    word_emb  = get_query_word_embedding(word_embeddings, embeddings, word2index, ngram_hash, word)
+
+    similarities = cosine_similarity([word_emb], word_embeddings)[0]
+    top10        = np.argsort(similarities)[-10:]
+
+    return [index2word[index] for index in reversed(top10)]
+
+def generate_character_ngram(word2index):
+    ngram_range = config.NGRAM_RANGE
+    word_ngram  = defaultdict(list)
+
+    ngrams      = []
+    
+    for token in word2index.keys():
+        ngram = []
+
+        if token == '<unk>':
+            ngrams.append(token)
+            ngram.append(token)
+            word_ngram[token].extend(list(set(ngram)))
+            continue
+
+        token = '<' + token + '>'
+
+        for i in range(len(token) - ngram_range + 1):
+            ngrams.append(token[i:i+ngram_range])
+            ngram.append(token[i:i+ngram_range])
+        
+        ngram.append(token)
+        ngrams.append(token)
+
+        word_ngram[token[1:-1]].extend(list(set(ngram)))
+
+    ngrams = list(set(ngrams))
+
+    ngram_hash = {}
+
+    for ngram in ngrams:
+        ngram_hash[ngram] = len(ngram_hash) + 1
+
+    print('Number of charater n-grams: {}'.format(len(ngram_hash)))
+
+    hash_ngram = {}
+
+    for  k,v in ngram_hash.items():
+        hash_ngram[v] = k
+
+    word_ngram_index = {}
+
+    for k,v in word_ngram.items():
+        word_ngram_index[word2index[k]] = [ngram_hash[x] for x in v]
+
+    return ngram_hash, hash_ngram, word_ngram_index, word_ngram
+
+def pad_to_dense_3D(M, num_skips):
+    maxlen = max(len(s) for r in M for s in r)
+    Z      = np.zeros((len(M), num_skips, maxlen))
+
+    for enu, row in enumerate(M):
+        for skip in range(num_skips):
+            Z[enu, skip, :len(row[skip])] += row[skip]
+
+    return Z.astype(np.int)
 
 def get_pw(word2index):
     factor = 0
@@ -118,6 +223,35 @@ def get_pw(word2index):
     p_w    = {k: (v ** config.UNIGRAM_POWER) * factor for k,v in word2index.items()}
 
     return p_w
+
+def get_neg_word_indices_ft(batch_len, context_window, word2index, p_w):
+    NUM_WORDS = config.NUM_NEG_WORDS
+    neg_word_indices = []
+
+    for i in range(batch_len):
+        nws = []
+        for j in range(context_window):
+            neg_words = np.random.choice([k for k in word2index.keys()], size=NUM_WORDS, replace=False, p=[v for v in p_w.values()])
+            nws.append(np.array([word2index[w] for w in neg_words]))
+        
+        neg_word_indices.append(nws)
+
+    return neg_word_indices
+
+def get_pos_word_indices(batch_len, context_window, labels):
+    pos_words_indices = []
+
+    for i in range(batch_len):
+        pws = []
+
+        for j in range(context_window):
+            pws.append([labels[i][j].cpu().item()])
+        
+        pos_words_indices.append(pws)
+
+    return pos_words_indices
+
+
 
 def make_skip_gram_batchs_iter_with_context(contexts, window_size, num_skips, batch_size):
     assert batch_size % num_skips == 0
@@ -146,4 +280,34 @@ def make_skip_gram_batchs_iter_with_context(contexts, window_size, num_skips, ba
             batch_data.extend([words_to_use])
             batch_labels.extend([central_word])
         
+        yield batch_data, batch_labels
+
+def make_skip_gram_batchs_iter_for_fasttext(contexts, window_size, num_skips, batch_size, word_ngram_index):
+    assert batch_size % num_skips == 0
+    assert num_skips <= 2 * window_size
+        
+    central_words = [word for word, context in contexts if len(context) == 2 * window_size and word != 0]
+    contexts = [context for word, context in contexts if len(context) == 2 * window_size and word != 0]
+
+    batch_size   = int(batch_size / num_skips)
+    batchs_count = int(math.ceil(len(contexts) / batch_size))
+       
+    print('Initializing batchs generator with {} batchs per epoch'.format(batchs_count))
+    indices = np.arange(len(contexts))
+    np.random.shuffle(indices)
+    
+    for i in range(batchs_count):
+        batch_begin, batch_end = i * batch_size, min((i + 1) * batch_size, len(contexts))
+        batch_indices = indices[batch_begin: batch_end]
+
+        batch_data, batch_labels = [], []
+
+        for data_ind in batch_indices:
+            central_word, context = central_words[data_ind], contexts[data_ind]
+            words_to_use = random.sample(context, num_skips)
+           
+            batch_data.extend([[word_ngram_index[central_word]] * num_skips])
+            batch_labels.extend([words_to_use])
+        
+        batch_data = pad_to_dense_3D(batch_data, num_skips)
         yield batch_data, batch_labels

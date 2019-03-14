@@ -2,6 +2,8 @@ import config
 import numpy as np
 import torch
 
+from utils import *
+
 def get_neg_word_indices(word2index, batch_len, p_w):
     neg_words_indices = []
 
@@ -43,4 +45,21 @@ def batch_transpose_trick_loss(center_word_repr, labels):
 
     return loss
 
+def fasttext_loss_fn(logits, labels, batch_len, context_window, word2index, p_w):
+    pos_word_indices = get_pos_word_indices(batch_len, context_window, labels)
+    pos_word_indices = torch.cuda.LongTensor(pos_word_indices)
 
+    pos_sim = torch.gather(logits, 2, pos_word_indices)
+    pos_sim = torch.log(1 + torch.exp(-pos_sim))
+    pos_sim = torch.sum(torch.sum(pos_sim, dim=2), dim=1)
+
+    neg_word_indices = get_neg_word_indices_ft(batch_len, context_window, word2index, p_w)
+    neg_word_indices = torch.cuda.LongTensor(neg_word_indices)
+
+    neg_sim = torch.gather(logits, 2, neg_word_indices)
+    neg_sim = torch.log(1 + torch.exp(neg_sim))
+    neg_sim = torch.sum(torch.sum(neg_sim, dim=2), dim=1)
+
+    loss    = torch.sum(pos_sim + neg_sim)
+
+    return loss
