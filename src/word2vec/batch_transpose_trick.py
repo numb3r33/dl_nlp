@@ -18,7 +18,7 @@ def main(data_path, vis_fn):
     print('sample of some words: {}'.format(np.random.choice(list(word2index.keys()), 5)))
 
     model = train_w2v_batch_transpose_trick(contexts, V, num_skips=config.NUM_SKIPS, batch_size=config.BTT_BATCH_SIZE)
-    embeddings = get_embedding(model)
+    embeddings = get_embedding(model[0])
     print(most_similar(embeddings, index2word, word2index, config.WORD))
 
     visualize_embeddings(embeddings, index2word, config.SAMPLE, vis_fn)

@@ -18,7 +18,7 @@ def main(data_path, vis_fn):
     print('sample of some words: {}'.format(np.random.choice(list(word2index.keys()), 5)))
 
     model = train_w2v_vanilla_neg_sampling(contexts, V, num_skips=config.NUM_SKIPS, batch_size=config.BATCH_SIZE, word2index=word2index, p_w=p_w)
-    embeddings = get_embedding(model)
+    embeddings = get_embedding(model[0])
     print(most_similar(embeddings, index2word, word2index, config.WORD))
 
     visualize_embeddings(embeddings, index2word, config.SAMPLE, vis_fn)
