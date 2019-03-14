@@ -47,6 +47,6 @@ if __name__ == '__main__':
     args       = parser.parse_args()
     data_path  = args.data_path
     vis_fn     = args.vis_fn
-    model_name = model_name
+    model_name = args.model_name
 
     main(data_path, vis_fn, model_name)
