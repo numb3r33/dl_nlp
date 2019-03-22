@@ -1,0 +1,27 @@
+Reading file from: ../../data/jigsaw_toxic/processed/train_sample.csv
+Creating new target field
+   toxic  severe_toxic  obscene  threat  insult  identity_hate  decent
+0      0             0        0       0       0              0       1
+1      0             0        0       0       0              0       1
+2      0             0        0       0       0              0       1
+3      1             0        0       0       0              0       0
+4      0             0        0       0       0              0       1
+
+Create tokenized comments
+Create tokenized comments ( str )
+Define Word2Vec Model
+Fetch Task vocabulary
+Word vectors for all the tokens
+Calculate mean and std of word embeddings
+Create word embeddings
+Prepare token to id mapping
+Split into train and validation
+   toxic  severe_toxic  obscene  threat  insult  identity_hate  decent
+0      0             0        0       0       0              0       1
+1      0             0        0       0       0              0       1
+2      0             0        0       0       0              0       1
+
+   toxic  severe_toxic  obscene  threat  insult  identity_hate  decent
+0      1             0        0       0       0              0       0
+1      0             0        0       0       0              0       1
+2      0             0        0       0       0              0       1
