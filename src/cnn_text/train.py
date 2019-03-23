@@ -93,16 +93,16 @@ def fit(model, criterion, optimizer, train_data, epochs_count=1,
 
 def train_and_evaluate(model, criterion, optimizer, embedding_matrix, token_to_id, exp_name, data_train, data_val, TARGET_COLS, UNK_IX, PAD_IX, run_mode):
     if run_mode == 'train':
-        X_train      = as_matrix(data_train['tokenized_comments'], token_to_id, UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
+        X_train      = as_matrix(data_train['tokenized_comments'], token_to_id, PARAMS[exp_name]['WORD_DROPOUT'], UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
         train_labels = data_train.loc[:, TARGET_COLS].values
 
-        X_test       = as_matrix(data_val['tokenized_comments'], token_to_id, UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
+        X_test       = as_matrix(data_val['tokenized_comments'], token_to_id, PARAMS[exp_name]['WORD_DROPOUT'], UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
         test_labels  = data_val.loc[:, TARGET_COLS].values
     else:
-        X_train      = as_matrix(data_train['tokenized_comments'], token_to_id, UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
+        X_train      = as_matrix(data_train['tokenized_comments'], token_to_id, PARAMS[exp_name]['WORD_DROPOUT'], UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
         train_labels = data_train.loc[:, TARGET_COLS].values
 
-        X_test       = as_matrix(data_val['tokenized_comments'], token_to_id, UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
+        X_test       = as_matrix(data_val['tokenized_comments'], token_to_id, PARAMS[exp_name]['WORD_DROPOUT'], UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
 
     if run_mode == 'train':
         model        = fit(model, criterion, optimizer, train_data=(X_train, train_labels), epochs_count=PARAMS[exp_name]['NB_EPOCHS'],

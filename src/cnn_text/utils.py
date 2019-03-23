@@ -87,7 +87,7 @@ def get_token_to_id(words, word2vec, UNK_IX, PAD_IX):
 
     return token_to_id
 
-def as_matrix(sequences, token_to_id, UNK_IX, PAD_IX, max_len=None):
+def as_matrix(sequences, token_to_id, word_dropout, UNK_IX, PAD_IX, max_len=None):
     """ Convert a list of tokens into a matrix with padding """
 
     if isinstance(sequences[0], str):
@@ -100,7 +100,17 @@ def as_matrix(sequences, token_to_id, UNK_IX, PAD_IX, max_len=None):
         row_ix = [token_to_id.get(word, UNK_IX) for word in seq[:max_len]]
         matrix[i, :len(row_ix)] = row_ix
 
+    if word_dropout != 0:
+        matrix = apply_word_dropout(matrix, 1 - word_dropout, replace_with=UNK_IX, pad_ix=PAD_IX)
+
     return matrix
+
+
+def apply_word_dropout(matrix, keep_prop, replace_with, pad_ix):
+    dropout_mask = np.random.choice(2, np.shape(matrix), p=[keep_prop, 1-keep_prop])
+    dropout_mask &= matrix != pad_ix
+    return np.choose(dropout_mask, [matrix, np.full_like(matrix, replace_with)])
+
 
 
 def get_train_test_splits(train, exp_name):
