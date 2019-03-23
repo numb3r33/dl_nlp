@@ -1,11 +1,12 @@
 import pandas as pd
 import numpy as np
+import os
 from config import *
 
 from nltk.tokenize import WordPunctTokenizer
 from gensim.models import Word2Vec
 from sklearn.model_selection import train_test_split
-
+from sklearn.externals import joblib
 
 tokenizer = WordPunctTokenizer()
 
@@ -31,14 +32,19 @@ def get_tokenized_comments_string(comment):
     print('Create tokenized comments ( str )')
     return list(map(' '.join, map(tokenizer.tokenize, comment)))
 
-def define_word2vec(tokenized_comments, exp_name):
-    print('Define Word2Vec Model')
+def define_word2vec(tokenized_comments, exp_name, model_fp):
+    print('Defining word2vec model')
 
-    model = Word2Vec(tokenized_comments,
-                     size=PARAMS[exp_name]['EMBEDDING_SIZE'],
-                     min_count=PARAMS[exp_name]['MIN_FREQ'],
-                     window=PARAMS[exp_name]['CONTEXT_WINDOW']
-                    ).wv
+    if os.path.exists(model_fp):
+        model = joblib.load(model_fp)
+    else:
+        model = Word2Vec(tokenized_comments,
+                         size=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                         min_count=PARAMS[exp_name]['MIN_FREQ'],
+                         window=PARAMS[exp_name]['CONTEXT_WINDOW']
+                        ).wv
+
+        joblib.dump(model, model_fp)
 
     return model
 

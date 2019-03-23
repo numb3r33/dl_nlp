@@ -91,16 +91,7 @@ def fit(model, criterion, optimizer, train_data, epochs_count=1,
 
     return model
 
-def train_and_evaluate(embedding_matrix, token_to_id, exp_name, data_train, data_val, TARGET_COLS, UNK_IX, PAD_IX, run_mode):
-    model =TConvolution(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
-                         vocab_size=len(token_to_id),
-                         hidden_dim=PARAMS[exp_name]['EMBEDDING_SIZE'],
-                         num_classes=7,
-                         PAD_IX=PAD_IX).cuda()
-
-    criterion    = nn.BCEWithLogitsLoss().cuda()
-    optimizer    = optim.Adam([param for param in model.parameters() if param.requires_grad], lr=PARAMS[exp_name]['LEARNING_RATE'])
-
+def train_and_evaluate(model, criterion, optimizer, embedding_matrix, token_to_id, exp_name, data_train, data_val, TARGET_COLS, UNK_IX, PAD_IX, run_mode):
     if run_mode == 'train':
         X_train      = as_matrix(data_train['tokenized_comments'], token_to_id, UNK_IX, PAD_IX, max_len=PARAMS[exp_name]['MAX_LEN'])
         train_labels = data_train.loc[:, TARGET_COLS].values
