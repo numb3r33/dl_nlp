@@ -17,8 +17,8 @@ torch.manual_seed(SEED)
 
 def do_epoch(model, criterion, data, batch_size, optimizer=None):
     epoch_loss, total_size = 0, 0
-    per_label_preds = [[], [], [], [], [], [], []]
-    per_label_true  = [[], [], [], [], [], [], []]
+    per_label_preds = [[], [], [], [], [], []]
+    per_label_true  = [[], [], [], [], [], []]
 
     is_train = not optimizer is None
     model.train(is_train)
@@ -43,7 +43,7 @@ def do_epoch(model, criterion, data, batch_size, optimizer=None):
             logits_cpu   = logits.cpu().detach().numpy()
 
             # per_label_preds
-            for j in range(7):
+            for j in range(6):
                 label_preds     = logits_cpu[:, j]
                 per_label_preds[j].extend(label_preds)
                 per_label_true[j].extend(batch_target[:, j])
@@ -56,7 +56,7 @@ def do_epoch(model, criterion, data, batch_size, optimizer=None):
 
     label_auc = []
 
-    for i in range(7):
+    for i in range(6):
         label_auc.append(roc_auc_score(per_label_true[i], per_label_preds[i]))
 
     return epoch_loss / batchs_count, np.mean(label_auc)

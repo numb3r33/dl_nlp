@@ -1,12 +1,15 @@
 import pandas as pd
 import numpy as np
 import os
+import gc
 from config import *
 
 from nltk.tokenize import WordPunctTokenizer
 from gensim.models import Word2Vec
+import gensim.models.keyedvectors as word2vec
 from sklearn.model_selection import train_test_split
 from sklearn.externals import joblib
+from collections import Counter
 
 tokenizer = WordPunctTokenizer()
 
@@ -15,11 +18,11 @@ def read_csv(fp):
     return pd.read_csv(fp)
 
 def get_target_cols():
-    return  ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate', 'decent']
+    return  ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
 
 def create_new_target(df):
     print('Creating new target field')
-    TARGET_COLS         =  ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate'] 
+    TARGET_COLS         = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate'] 
     df.loc[:, 'decent'] = 1 - df.loc[:, TARGET_COLS].max(axis=1)
 
     return df
@@ -52,6 +55,18 @@ def get_word2vec_vocab(model):
     print('Fetch Task vocabulary')
     return sorted(model.vocab.keys(), key=lambda word: model.vocab[word].count, reverse=True)
 
+def get_vocab(train, exp_name):
+    token_counts = Counter()
+
+    for comment in train.tokenized_comments:
+        token_counts.update(comment.split())
+
+    min_count = PARAMS[exp_name]['MIN_FREQ']
+    tokens    = {token: count for token, count in token_counts.items() if count >= min_count}
+
+    print('Number of tokens: {}'.format(len(tokens)))
+    return tokens
+
 def get_word_vectors(model, words):
     print('Word vectors for all the tokens')
     return model.vectors[[model.vocab[word].index for word in words]]
@@ -78,12 +93,96 @@ def create_embedding(word_vectors, words, word2vec, emb_mean, emb_std, exp_name)
 
     return embedding_matrix, UNK_IX, PAD_IX
 
-def get_token_to_id(words, word2vec, UNK_IX, PAD_IX):
+
+
+def load_wv_embedding_matrix(words):
+    word2vec_dict = word2vec.KeyedVectors.load_word2vec_format('../../data/jigsaw_toxic/processed/word2vec.bin.gz', binary=True)
+    embed_size    = 300
+
+    embedding_index = dict()
+    for word in word2vec_dict.wv.vocab:
+        embedding_index[word] = word2vec_dict.word_vec(word)
+
+    print('Loaded %d word vectors'%(len(embedding_index)))
+
+    all_embs          = np.stack(list(embedding_index.values()))
+    emb_mean, emb_std = all_embs.mean(), all_embs.std()
+
+    UNK, PAD       = 'UNK', 'PAD'
+    UNK_IX, PAD_IX = len(words), len(words) + 1
+
+    nb_words = len(words) + 2
+
+    embedding_matrix = np.random.normal(emb_mean, emb_std, (nb_words, embed_size))
+
+    embed_cnt = 0
+    for i, word in enumerate(list(words.keys()) + [UNK, PAD]):
+        embedding_vector = embedding_index.get(word)
+
+        if embedding_vector is not None:
+            embedding_matrix[i] = embedding_vector
+            embed_cnt +=1
+
+    print('total embedded ', embed_cnt, ' common words')
+    del embedding_index
+    gc.collect()
+
+    return embedding_matrix, UNK, PAD, UNK_IX, PAD_IX
+
+def load_glove_embedding_matrix(words):
+    EMBEDDING_FILE = '../../data/jigsaw_toxic/processed/glove.6B.300d.txt'
+    embed_size     = 300
+
+    embedding_index = dict()
+    f = open(EMBEDDING_FILE, 'r')
+
+    for line in f.readlines():
+        values = line.split()
+        word   = values[0]
+        coefs  = np.asarray(values[1:], dtype='float32')
+        embedding_index[word] = coefs
+
+    f.close()
+    print('Loaded %d word vectors'%(len(embedding_index)))
+
+    all_embs          = np.stack(list(embedding_index.values()))
+    emb_mean, emb_std = all_embs.mean(), all_embs.std()
+
+    UNK, PAD       = 'UNK', 'PAD'
+    UNK_IX, PAD_IX = len(words), len(words) + 1
+
+    nb_words = len(words) + 2
+
+    embedding_matrix = np.random.normal(emb_mean, emb_std, (nb_words, embed_size))
+
+    embed_cnt = 0
+    for i, word in enumerate(list(words.keys()) + [UNK, PAD]):
+        embedding_vector = embedding_index.get(word)
+
+        if embedding_vector is not None:
+            embedding_matrix[i] = embedding_vector
+            embed_cnt +=1
+
+    print('total embedded ', embed_cnt, ' common words')
+    del embedding_index
+    gc.collect()
+
+    return embedding_matrix, UNK, PAD, UNK_IX, PAD_IX
+
+
+def get_wv_token_to_id(words, word2vec, UNK_IX, PAD_IX):
     print('Prepare token to id mapping')
 
     token_to_id = {word: word2vec.vocab[word].index for word in words}
     token_to_id[UNK_IX] = UNK_IX
     token_to_id[PAD_IX] = PAD_IX
+
+    return token_to_id
+
+def get_token_to_id(words, UNK, PAD, UNK_IX, PAD_IX):
+    token_to_id = {word: index for index, word in enumerate(words.keys())}
+    token_to_id[UNK] = UNK_IX
+    token_to_id[PAD] = PAD_IX
 
     return token_to_id
 
