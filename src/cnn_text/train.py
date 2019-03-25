@@ -134,7 +134,7 @@ def predict(model, data, batch_size):
 
 def prepare_submission(test_labels, preds, fp):
     df = test_labels.copy()
-    df.iloc[:, 1:] = preds[:, :-1]
+    df.iloc[:, 1:] = preds
     df.to_csv(fp, index=False)
 
     return df
