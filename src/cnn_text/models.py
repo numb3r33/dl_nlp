@@ -516,6 +516,289 @@ class Experiment8(nn.Module):
         return out
 
 
+class Experiment9(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, hidden_dim, num_classes):
+        super(Experiment9, self).__init__()
+
+        self.hidden_dim  = hidden_dim
+        self.vocab_size  = vocab_size
+        self.num_classes = num_classes
+
+        self.nfms        = [100, 100]
+        self.ks          = [4, 5]
+        self.Cout        = 1
+
+        # first embedding layer that is static ( non-trainable )
+        self.static_embedding        = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+        # make embedding layer non-trainable
+        self.static_embedding.weight.requires_grad = False
+
+
+        self.conv_layer1 = nn.Conv1d(self.hidden_dim, self.nfms[0], self.ks[0])
+        self.conv_layer2 = nn.Conv1d(self.hidden_dim, self.nfms[1], self.ks[1])
+
+        self.relu        = nn.ReLU()
+        self.fc          = nn.Linear(self.nfms[0] + self.nfms[1], self.num_classes)
+        self.dropout     = nn.Dropout(0.1)
+
+    def forward(self, x):
+        static_emb = self.static_embedding(x)
+        static_emb = torch.transpose(static_emb, 1, 2)
+
+        out = static_emb
+
+        # pass it through convolutional layer to calculate unigrams
+        out1 = self.conv_layer1(out)
+        out1 = self.relu(out1)
+
+        out2 = self.conv_layer2(out)
+        out2 = self.relu(out2)
+
+        out1 = torch.transpose(out1, 1, 2)
+        out2 = torch.transpose(out2, 1, 2)
+
+        # global max pool
+        out1 = out1.max(dim=1)[0]
+        out2 = out2.max(dim=1)[0]
+
+        # concantenate all the outputs together
+        out     = torch.cat((out1, out2), dim=1)
+
+        # apply dropout layer
+        out     = self.dropout(out)
+
+        # fully connected layer
+        out     = self.fc(out)
+
+        return out
+
+
+class Experiment10(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, hidden_dim, num_classes):
+        super(Experiment10, self).__init__()
+
+        self.hidden_dim  = hidden_dim
+        self.vocab_size  = vocab_size
+        self.num_classes = num_classes
+
+        self.nfms        = [150, 150, 150]
+        self.ks          = [3, 4, 5]
+
+        # first embedding layer that is static ( non-trainable )
+        self.static_embedding        = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+        # make embedding layer non-trainable
+        self.static_embedding.weight.requires_grad = False
+
+
+        self.conv_layer1 = nn.Conv1d(self.hidden_dim, self.nfms[0], self.ks[0])
+        self.conv_layer2 = nn.Conv1d(self.hidden_dim, self.nfms[1], self.ks[1])
+        self.conv_layer3 = nn.Conv1d(self.hidden_dim, self.nfms[2], self.ks[2])
+
+        self.relu        = nn.ReLU()
+        self.fc          = nn.Linear(self.nfms[0] + self.nfms[1] +\
+                                     self.nfms[2], self.num_classes)
+        self.dropout     = nn.Dropout(0.1)
+
+    def forward(self, x):
+        static_emb = self.static_embedding(x)
+        static_emb = torch.transpose(static_emb, 1, 2)
+
+        out = static_emb
+
+        # pass it through convolutional layer to calculate unigrams
+        out1 = self.conv_layer1(out)
+        out1 = self.relu(out1)
+
+        out2 = self.conv_layer2(out)
+        out2 = self.relu(out2)
+
+        out3 = self.conv_layer3(out)
+        out3 = self.relu(out3)
+
+        out1 = torch.transpose(out1, 1, 2)
+        out2 = torch.transpose(out2, 1, 2)
+        out3 = torch.transpose(out3, 1, 2)
+
+        # global max pool
+        out1 = out1.max(dim=1)[0]
+        out2 = out2.max(dim=1)[0]
+        out3 = out3.max(dim=1)[0]
+
+        # concantenate all the outputs together
+        out     = torch.cat((out1, out2, out3), dim=1)
+
+        # apply dropout layer
+        out     = self.dropout(out)
+
+        # fully connected layer
+        out     = self.fc(out)
+
+        return out
+
+
+class Experiment12(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, hidden_dim, num_classes):
+        super(Experiment12, self).__init__()
+
+        self.hidden_dim  = hidden_dim
+        self.vocab_size  = vocab_size
+        self.num_classes = num_classes
+
+        self.nfms        = [150, 150, 150, 150]
+        self.ks          = [3, 4, 4, 5]
+        self.Cout        = 2
+
+        # first embedding layer that is static ( non-trainable )
+        self.static_embedding        = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+        # make embedding layer non-trainable
+        self.static_embedding.weight.requires_grad = False
+
+        # non-static embedding layer ( specific to the current task )
+        self.ns_static_embedding = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.ns_static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+
+        self.conv_layer1 = nn.Conv1d(self.Cout * self.hidden_dim, self.nfms[0], self.ks[0])
+        self.conv_layer2 = nn.Conv1d(self.Cout * self.hidden_dim, self.nfms[1], self.ks[1])
+        self.conv_layer3 = nn.Conv1d(self.Cout * self.hidden_dim, self.nfms[2], self.ks[2])
+        self.conv_layer4 = nn.Conv1d(self.Cout * self.hidden_dim, self.nfms[3], self.ks[3])
+
+        self.relu        = nn.ReLU()
+        self.fc          = nn.Linear(self.nfms[0] + self.nfms[1] +\
+                                     self.nfms[2] + self.nfms[3]
+                                     , self.num_classes)
+
+        self.dropout         = nn.Dropout(0.1)
+        self.spatial_dropout = nn.Dropout2d(0.4)
+
+    def forward(self, x):
+        static_emb = self.static_embedding(x)
+        static_emb = torch.transpose(static_emb, 1, 2)
+
+        ns_static_emb = self.ns_static_embedding(x)
+        ns_static_emb = torch.transpose(ns_static_emb, 1, 2)
+
+        out  = torch.cat((static_emb, ns_static_emb), dim = 1)
+        #out   = static_emb
+
+        # spatial dropout
+        out  = self.spatial_dropout(out)
+
+        # pass it through convolutional layer to calculate unigrams
+        out1 = self.conv_layer1(out)
+        out1 = self.relu(out1)
+
+        out2 = self.conv_layer2(out)
+        out2 = self.relu(out2)
+
+        out3 = self.conv_layer3(out)
+        out3 = self.relu(out3)
+
+        out4 = self.conv_layer4(out)
+        out4 = self.relu(out4)
+
+        out1 = torch.transpose(out1, 1, 2)
+        out2 = torch.transpose(out2, 1, 2)
+        out3 = torch.transpose(out3, 1, 2)
+        out4 = torch.transpose(out4, 1, 2)
+
+        # global max pool
+        out1 = out1.max(dim=1)[0]
+        out2 = out2.max(dim=1)[0]
+        out3 = out3.max(dim=1)[0]
+        out4 = out4.max(dim=1)[0]
+
+        # concantenate all the outputs together
+        out     = torch.cat((out1, out2, out3, out4), dim=1)
+
+        # apply dropout layer
+        out     = self.dropout(out)
+
+        # fully connected layer
+        out     = self.fc(out)
+
+        return out
+
+
+class Experiment11(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, hidden_dim, num_classes):
+        super(Experiment11, self).__init__()
+
+        self.hidden_dim  = hidden_dim
+        self.vocab_size  = vocab_size
+        self.num_classes = num_classes
+
+        self.nfms        = [150, 150, 150]
+        self.ks          = [4, 4, 5]
+        self.Cout        = 2
+
+        # first embedding layer that is static ( non-trainable )
+        self.static_embedding        = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+        # make embedding layer non-trainable
+        self.static_embedding.weight.requires_grad = False
+
+        # non-static embedding layer ( specific to the current task )
+        self.ns_static_embedding = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.ns_static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+
+        self.conv_layer1 = nn.Conv1d(self.Cout * self.hidden_dim, self.nfms[0], self.ks[0])
+        self.conv_layer2 = nn.Conv1d(self.Cout * self.hidden_dim, self.nfms[1], self.ks[1])
+        self.conv_layer3 = nn.Conv1d(self.Cout * self.hidden_dim, self.nfms[2], self.ks[2])
+
+        self.relu        = nn.ReLU()
+        self.fc          = nn.Linear(self.nfms[0] + self.nfms[1] +\
+                                     self.nfms[2], self.num_classes)
+
+        self.dropout         = nn.Dropout(0.1)
+        self.spatial_dropout = nn.Dropout2d(0.2)
+
+    def forward(self, x):
+        static_emb = self.static_embedding(x)
+        static_emb = torch.transpose(static_emb, 1, 2)
+
+        ns_static_emb = self.ns_static_embedding(x)
+        ns_static_emb = torch.transpose(ns_static_emb, 1, 2)
+
+        out  = torch.cat((static_emb, ns_static_emb), dim = 1)
+
+        # spatial dropout
+        out  = self.spatial_dropout(out)
+
+        #out = static_emb
+
+        # pass it through convolutional layer to calculate unigrams
+        out1 = self.conv_layer1(out)
+        out1 = self.relu(out1)
+
+        out2 = self.conv_layer2(out)
+        out2 = self.relu(out2)
+
+        out3 = self.conv_layer3(out)
+        out3 = self.relu(out3)
+
+        out1 = torch.transpose(out1, 1, 2)
+        out2 = torch.transpose(out2, 1, 2)
+        out3 = torch.transpose(out3, 1, 2)
+
+        # global max pool
+        out1 = out1.max(dim=1)[0]
+        out2 = out2.max(dim=1)[0]
+        out3 = out3.max(dim=1)[0]
+
+        # concantenate all the outputs together
+        out     = torch.cat((out1, out2, out3), dim=1)
+
+        # apply dropout layer
+        out     = self.dropout(out)
+
+        # fully connected layer
+        out     = self.fc(out)
+
+        return out
+
 def get_exp2_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment2(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
                         vocab_size=len(token_to_id),
@@ -571,4 +854,32 @@ def get_exp8_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
                         hidden_dim=PARAMS[exp_name]['EMBEDDING_SIZE'],
                         num_classes=6,
                         PAD_IX=PAD_IX).cuda()
+    return model
+
+def get_exp9_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment9(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        hidden_dim=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        num_classes=6).cuda()
+    return model
+
+def get_exp10_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment10(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        hidden_dim=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        num_classes=6).cuda()
+    return model
+
+def get_exp11_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment11(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        hidden_dim=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        num_classes=6).cuda()
+    return model
+
+def get_exp12_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment12(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        hidden_dim=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        num_classes=6).cuda()
     return model

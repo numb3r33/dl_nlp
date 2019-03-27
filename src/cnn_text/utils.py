@@ -55,11 +55,11 @@ def get_word2vec_vocab(model):
     print('Fetch Task vocabulary')
     return sorted(model.vocab.keys(), key=lambda word: model.vocab[word].count, reverse=True)
 
-def get_vocab(train, exp_name):
+def get_vocab(train_tokenized_comments, exp_name):
     token_counts = Counter()
 
-    for comment in train.tokenized_comments:
-        token_counts.update(comment.split())
+    for tok_counts in train_tokenized_comments:
+        token_counts.update(tok_counts)
 
     min_count = PARAMS[exp_name]['MIN_FREQ']
     tokens    = {token: count for token, count in token_counts.items() if count >= min_count}
@@ -170,12 +170,55 @@ def load_glove_embedding_matrix(words):
     return embedding_matrix, UNK, PAD, UNK_IX, PAD_IX
 
 
-def get_wv_token_to_id(words, word2vec, UNK_IX, PAD_IX):
+def load_fasttext_embedding_matrix(words):
+    def get_coefs(word, *arr):
+        return word, np.asarray(arr, dtype='float32')
+
+
+    EMBEDDING_FILE = '../../data/jigsaw_toxic/processed/crawl-300d-2M.vec'
+    embed_size     = 300
+
+    embedding_index = dict()
+    f = open(EMBEDDING_FILE, 'r')
+
+    for o in f.readlines()[1:]:
+        word, coefs = get_coefs(*o.rstrip().rsplit(' '))
+        embedding_index[word] = coefs
+
+    f.close()
+    print('Loaded %d word vectors'%(len(embedding_index)))
+
+    all_embs          = np.stack(list(embedding_index.values()))
+    emb_mean, emb_std = all_embs.mean(), all_embs.std()
+
+    UNK, PAD       = 'UNK', 'PAD'
+    UNK_IX, PAD_IX = len(words), len(words) + 1
+
+    nb_words = len(words) + 2
+
+    embedding_matrix = np.random.normal(emb_mean, emb_std, (nb_words, embed_size))
+
+    embed_cnt = 0
+    for i, word in enumerate(list(words.keys()) + [UNK, PAD]):
+        embedding_vector = embedding_index.get(word)
+
+        if embedding_vector is not None:
+            embedding_matrix[i] = embedding_vector
+            embed_cnt +=1
+
+    print('total embedded ', embed_cnt, ' common words')
+    del embedding_index
+    gc.collect()
+
+    return embedding_matrix, UNK, PAD, UNK_IX, PAD_IX
+
+
+def get_wv_token_to_id(words, word2vec, UNK, PAD, UNK_IX, PAD_IX):
     print('Prepare token to id mapping')
 
     token_to_id = {word: word2vec.vocab[word].index for word in words}
-    token_to_id[UNK_IX] = UNK_IX
-    token_to_id[PAD_IX] = PAD_IX
+    token_to_id[UNK] = UNK_IX
+    token_to_id[PAD] = PAD_IX
 
     return token_to_id
 
