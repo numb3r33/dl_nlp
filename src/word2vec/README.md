@@ -1,4 +1,4 @@
-This repo contains implementation of Word2Vec which learns neural word embeddings using SkipGram Model tried following things:
+This repo contains implementation of Word2Vec which learns neural word embeddings using SkipGram Model.:
 
 - [Naive Word2Vec](https://arxiv.org/pdf/1411.2738.pdf) with a two-layer neural network.
 - Word2vec only with one matrix.
