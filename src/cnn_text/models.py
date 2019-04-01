@@ -799,6 +799,68 @@ class Experiment11(nn.Module):
 
         return out
 
+
+class Experiment13(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, embed_size, hidden_dim, num_classes):
+        super(Experiment13, self).__init__()
+
+        self.embed_size  = embed_size
+        self.hidden_dim  = hidden_dim
+        self.vocab_size  = vocab_size
+        self.num_classes = num_classes
+
+
+        # first embedding layer that is static ( non-trainable )
+        self.static_embedding        = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+        # make embedding layer non-trainable
+        self.static_embedding.weight.requires_grad = False
+
+        # non-static embedding layer ( specific to the current task )
+        self.ns_static_embedding = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.ns_static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+
+        self.spatial_dropout = nn.Dropout2d(0.2)
+
+        self.lstm = nn.LSTM(self.embed_size, self.hidden_dim)
+        self.fc1  = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.dropout = nn.Dropout(0.1)
+
+        self.fc2     = nn.Linear(self.hidden_dim, self.num_classes)
+
+
+    def forward(self, x):
+        static_emb = self.static_embedding(x)
+        #static_emb = torch.transpose(static_emb, 1, 2)
+
+       # ns_static_emb = self.ns_static_embedding(x)
+       # ns_static_emb = torch.transpose(ns_static_emb, 1, 2)
+
+        #out  = torch.cat((static_emb, ns_static_emb), dim = 1)
+        out = static_emb
+
+
+        # spatial dropout
+        out  = self.spatial_dropout(out)
+
+        # transpose input to seq, batch, elements
+        out   = torch.transpose(out, 0, 1)
+
+        # pass it through the LSTM cell
+        out, (ht, ct) = self.lstm(out)
+
+        # global max pool
+        out  = out.max(dim=0)[0]
+
+        # apply dropout layer
+        out  = self.fc1(out)
+        out  = self.dropout(out)
+
+        # fully connected layer
+        out  = self.fc2(out)
+
+        return out
+
 def get_exp2_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment2(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
                         vocab_size=len(token_to_id),
@@ -881,5 +943,13 @@ def get_exp12_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment12(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
                         vocab_size=len(token_to_id),
                         hidden_dim=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        num_classes=6).cuda()
+    return model
+
+def get_exp13_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment13(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        hidden_dim=PARAMS[exp_name]['HIDDEN_DIM'],
                         num_classes=6).cuda()
     return model

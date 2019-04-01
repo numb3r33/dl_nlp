@@ -123,5 +123,16 @@ PARAMS = {'exp1': {'MAX_LEN': 100,
           'NB_EPOCHS': 3,
           'BATCH_SIZE': 512,
           'WORD_DROPOUT': 0.005,
+        },
+         'exp13': {'MAX_LEN': 300,
+          'MIN_FREQ': 10,
+          'EMBEDDING_SIZE': 300,
+          'HIDDEN_DIM': 64, # define number of hidden states in a LSTM cell.
+          'TEST_SIZE': .2,
+          'SEED': 41,
+          'LEARNING_RATE': 0.001,
+          'NB_EPOCHS': 15,
+          'BATCH_SIZE': 512,
+          'WORD_DROPOUT': 0.005,
         }
         }
