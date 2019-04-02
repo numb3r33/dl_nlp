@@ -861,6 +861,82 @@ class Experiment13(nn.Module):
 
         return out
 
+
+class Experiment14(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, embed_size, hidden_dim, num_classes):
+        super(Experiment14, self).__init__()
+
+        self.embed_size  = embed_size
+        self.hidden_dim  = hidden_dim
+        self.vocab_size  = vocab_size
+        self.num_classes = num_classes
+
+        self.nfms = [150, 150, 150]
+        self.ks   = [3, 3, 5]
+        self.Cout = 1
+
+        # first embedding layer that is static ( non-trainable )
+        self.static_embedding        = nn.Embedding(self.vocab_size, self.hidden_dim)
+        self.static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+        # make embedding layer non-trainable
+        self.static_embedding.weight.requires_grad = False
+
+        # convolutional layers
+        self.conv_layer1 = nn.Conv1d(self.Cout * self.embed_size, self.nfms[0], self.ks[0], padding=1)
+        self.conv_layer2 = nn.Conv1d(self.Cout * self.embed_size, self.nfms[1], self.ks[1], padding=1)
+        self.conv_layer3 = nn.Conv1d(self.Cout * self.embed_size, self.nfms[2], self.ks[2], padding=2)
+
+        self.spatial_dropout = nn.Dropout2d(0.2)
+
+        self.relu = nn.ReLU()
+        self.lstm = nn.LSTM(self.nfms[0], self.hidden_dim)
+        self.fc   = nn.Linear(self.hidden_dim, self.num_classes)
+
+
+    def forward(self, x):
+        static_emb = self.static_embedding(x)
+        out = static_emb
+
+        # spatial dropout
+        out  = self.spatial_dropout(out)
+
+        # transpose input before passing it through conv filters
+        out  = torch.transpose(out, 1, 2)
+
+        # convolutional layers
+        out1 = self.conv_layer1(out)
+        out1 = self.relu(out1)
+
+        out2 = self.conv_layer2(out)
+        out2 = self.relu(out2)
+
+        out3 = self.conv_layer3(out)
+        out3 = self.relu(out3)
+
+        # transpose it back to batch, widht, channels
+        out1 = torch.transpose(out1, 1, 2)
+        out2 = torch.transpose(out2, 1, 2)
+        out3 = torch.transpose(out3, 1, 2)
+
+
+        out  = torch.cat((out1, out2, out3), dim=1)
+
+        # transpose input to seq, batch, elements
+        out   = torch.transpose(out, 0, 1)
+
+        # pass it through the LSTM cell
+        out, (ht, ct) = self.lstm(out)
+
+        # global max pool
+        out  = out.max(dim=0)[0]
+
+        # fully connected layer
+        out  = self.fc(out)
+
+        return out
+
+
+
 def get_exp2_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment2(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
                         vocab_size=len(token_to_id),
@@ -948,6 +1024,14 @@ def get_exp12_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
 
 def get_exp13_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment13(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        hidden_dim=PARAMS[exp_name]['HIDDEN_DIM'],
+                        num_classes=6).cuda()
+    return model
+
+def get_exp14_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment14(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
                         vocab_size=len(token_to_id),
                         embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
                         hidden_dim=PARAMS[exp_name]['HIDDEN_DIM'],
