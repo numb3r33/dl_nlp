@@ -175,7 +175,7 @@ def load_fasttext_embedding_matrix(words):
         return word, np.asarray(arr, dtype='float32')
 
 
-    EMBEDDING_FILE = '../../data/jigsaw_toxic/processed/crawl-300d-2M.vec'
+    EMBEDDING_FILE = '../../data/processed/crawl-300d-2M.vec'
     embed_size     = 300
 
     embedding_index = dict()

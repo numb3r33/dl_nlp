@@ -936,6 +936,112 @@ class Experiment14(nn.Module):
         return out
 
 
+class Flatten(nn.Module):
+    def forward(self, x):
+        return x.view(x.size(0), -1)
+
+class Experiment15(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, embed_size, num_classes, max_len):
+        super(Experiment15, self).__init__()
+
+        self.embed_size  = embed_size
+        self.vocab_size  = vocab_size
+        self.num_classes = num_classes
+        self.in_channels = 2
+        self.nfms        = 32
+        self.ks          = [2, 3, 4, 5]
+
+        # first embedding layer that is static ( non-trainable )
+        self.static_embedding        = nn.Embedding(self.vocab_size, self.embed_size)
+        self.static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+        # make embedding layer non-trainable
+        self.static_embedding.weight.requires_grad = False
+
+        # non-static embedding layer ( specific to the current task )
+        self.ns_static_embedding = nn.Embedding(self.vocab_size, self.embed_size)
+        self.ns_static_embedding.weight = nn.Parameter(pre_trained_embeddings)
+        
+        # define conv layers
+        self.conv_layer1 = nn.Conv2d(self.in_channels, self.nfms, kernel_size=(self.ks[0], self.embed_size), padding=1)
+        self.conv_layer2 = nn.Conv2d(self.in_channels, self.nfms, kernel_size=(self.ks[1], self.embed_size), padding=1)
+        self.conv_layer3 = nn.Conv2d(self.in_channels, self.nfms, kernel_size=(self.ks[2], self.embed_size), padding=1)
+        self.conv_layer4 = nn.Conv2d(self.in_channels, self.nfms, kernel_size=(self.ks[3], self.embed_size), padding=1)
+        
+        # define activation function
+        self.relu        = nn.ReLU()
+
+        # define max pooling layer
+        self.max_pool1    = nn.MaxPool2d(kernel_size=(max_len - self.ks[0] + 1, 1))
+        self.max_pool2    = nn.MaxPool2d(kernel_size=(max_len - self.ks[1] + 1, 1))
+        self.max_pool3    = nn.MaxPool2d(kernel_size=(max_len - self.ks[2] + 1, 1))
+        self.max_pool4    = nn.MaxPool2d(kernel_size=(max_len - self.ks[3] + 1, 1))
+
+        # fully connected layer
+        self.fc          = nn.Linear(self.nfms * (3 * len(self.ks)), self.num_classes)
+
+        # flatten layer
+        self.flatten     = Flatten()
+
+        # dropout layer
+        self.dropout     = nn.Dropout(0.1)
+
+        # spatial dropout
+        self.spatial_dropout = nn.Dropout2d(0.4)
+
+    def forward(self, x):
+        s_embed  = self.static_embedding(x)
+        ns_embed = self.ns_static_embedding(x)
+
+        # batch, seq, embedding -> batch, embedding, seq
+        s_embed_t = torch.transpose(s_embed, 1, 2)
+        s_embed_t = self.spatial_dropout(s_embed_t)
+        s_embed   = torch.transpose(s_embed_t, 1, 2)
+
+        ns_embed_t  = torch.transpose(ns_embed, 1, 2)
+        ns_embed_t  = self.spatial_dropout(ns_embed_t)
+        ns_embed    = torch.transpose(ns_embed_t, 1, 2)
+        
+        del s_embed_t
+        del ns_embed_t
+        
+        # change embedding to batch, channel, seq and elements
+        s_embed  = s_embed.unsqueeze(1)
+        ns_embed = ns_embed.unsqueeze(1)
+
+        out      = torch.cat((s_embed, ns_embed), dim=1)
+
+        # pass it through a conv filter
+        out1     = self.conv_layer1(out)
+        out1     = self.relu(out1)
+
+        out2     = self.conv_layer2(out)
+        out2     = self.relu(out2)
+
+        out3     = self.conv_layer3(out)
+        out3     = self.relu(out3)
+
+        out4     = self.conv_layer4(out)
+        out4     = self.relu(out4)
+        
+        # max pooling over sequence
+        out1      = self.max_pool1(out1)
+        out2      = self.max_pool2(out2)
+        out3      = self.max_pool3(out3)
+        out4      = self.max_pool4(out4)
+        
+        # concatenate along channels
+        out       = torch.cat((out1, out2, out3, out4), dim=1)
+
+        # flatten
+        out       = self.flatten(out)
+
+        # dropout
+        out       = self.dropout(out)
+        
+        # pass through fully connected layer
+        out      = self.fc(out)
+
+        return out
 
 def get_exp2_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment2(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
@@ -1036,4 +1142,13 @@ def get_exp14_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
                         embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
                         hidden_dim=PARAMS[exp_name]['HIDDEN_DIM'],
                         num_classes=6).cuda()
+    return model
+
+def get_exp15_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment15(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        num_classes=6,
+                        max_len=PARAMS[exp_name]['MAX_LEN']
+                        ).cuda()
     return model
