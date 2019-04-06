@@ -1,3 +1,5 @@
+import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -1043,6 +1045,85 @@ class Experiment15(nn.Module):
 
         return out
 
+
+class Experiment16(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, embed_size, hidden_size, num_classes):
+        super(Experiment16, self).__init__()
+
+        self.embed_size  = embed_size
+        self.vocab_size  = vocab_size
+        self.hidden_size = hidden_size
+        self.num_classes = num_classes
+        
+        # load embedding matrix
+        self.embedding        = nn.Embedding(self.vocab_size, self.embed_size)
+        self.embedding.weight = nn.Parameter(pre_trained_embeddings)
+
+        self.Wl  = nn.Parameter(data=torch.Tensor(self.hidden_size, self.hidden_size), requires_grad=True)
+        self.Wsl = nn.Parameter(data=torch.Tensor(self.hidden_size, self.embed_size), requires_grad=True) 
+        
+        self.Wr  = nn.Parameter(data=torch.Tensor(self.hidden_size, self.hidden_size), requires_grad=True)
+        self.Wsr = nn.Parameter(data=torch.Tensor(self.hidden_size, self.embed_size), requires_grad=True) 
+        
+        
+        self.cl  = nn.Parameter(data=torch.Tensor(1, self.hidden_size), requires_grad=True)
+        self.cr  = nn.Parameter(data=torch.Tensor(1, self.hidden_size), requires_grad=True)
+        
+        self.relu = nn.ReLU() 
+        self.fc   = nn.Linear(self.hidden_size * 2 + self.embed_size, self.num_classes)
+        
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.kaiming_uniform_(self.Wl, a=np.sqrt(5))
+        nn.init.kaiming_uniform_(self.Wsl, a=np.sqrt(5))
+        nn.init.kaiming_uniform_(self.Wr, a=np.sqrt(5))
+        nn.init.kaiming_uniform_(self.Wsr, a=np.sqrt(5))
+        nn.init.kaiming_uniform_(self.cl, a=np.sqrt(5))
+        nn.init.kaiming_uniform_(self.cr, a=np.sqrt(5))
+
+    def forward(self, x):
+
+        cl        = self.cl.repeat(x.size(0), 1)
+        cr        = self.cr.repeat(x.size(0), 1)
+        
+        
+        embed     = self.embedding(x)
+        cxt       = cl.t()
+        
+        left_context  = []
+        right_context = []
+        
+        # O(n)
+        for i in range(1, x.size(1)):
+            cxt         = self.relu(torch.mm(self.Wl, cxt) + torch.mm(self.Wsl, embed[:, i-1, :].t()))
+            left_context.append(cxt)
+        
+        cxt = cr.t()
+        
+        # O(n)
+        for i in range(x.size(1)-2, -1, -1):
+            cxt         = self.relu(torch.mm(self.Wr, cxt) + torch.mm(self.Wsr, embed[:, i-1, :].t()))
+            right_context.append(cxt)
+        
+        
+        left_context  = torch.cat([cl.t()] + left_context, dim=1)
+        left_context  = left_context.view(x.size(0), x.size(1), -1)
+        
+        right_context = torch.cat(right_context + [cr.t()], dim=1).t()
+        right_context = right_context.view(x.size(0), x.size(1), -1)
+        
+        # word representation
+        word_repr = torch.cat((left_context, embed, right_context), dim=2)
+        
+        # text representation
+        out = word_repr.max(dim=1)[0]
+        
+        # final layer
+        out = self.fc(out)
+        
+        return out
+
 def get_exp2_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment2(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
                         vocab_size=len(token_to_id),
@@ -1150,5 +1231,14 @@ def get_exp15_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
                         embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
                         num_classes=6,
                         max_len=PARAMS[exp_name]['MAX_LEN']
+                        ).cuda()
+    return model
+
+def get_exp16_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment16(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        hidden_size=PARAMS[exp_name]['HIDDEN_SIZE'],
+                        num_classes=6
                         ).cuda()
     return model
