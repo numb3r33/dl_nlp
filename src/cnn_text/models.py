@@ -1124,6 +1124,84 @@ class Experiment16(nn.Module):
         
         return out
 
+
+class Experiment17(nn.Module):
+    def __init__(self, pre_trained_embeddings, vocab_size, embed_size, hidden_size, num_classes):
+        super(Experiment17, self).__init__()
+        
+        self.vocab_size  = vocab_size
+        self.embed_size  = embed_size
+        self.hidden_size = hidden_size
+        self.num_classes = num_classes
+        
+        # define embedding
+        self.embedding        = nn.Embedding(self.vocab_size, self.embed_size)
+        self.embedding.weight = nn.Parameter(pre_trained_embeddings)
+        
+        # lstm
+        self.lstm      = nn.LSTM(self.embed_size, self.hidden_size)
+        
+        # time-distributed dense
+        self.td_dense  = nn.Linear(self.hidden_size * 2 + self.embed_size, 32)
+        
+        # activation layer
+        self.relu      = nn.ReLU()
+        self.tanh      = nn.Tanh()
+        
+        # fully connected layer
+        self.fc        = nn.Linear(32, self.num_classes)
+        
+        # spatial dropout
+        self.spatial_dropout = nn.Dropout2d(0.4)
+        
+        # dropout
+        self.dropout = nn.Dropout(0.2)
+    
+    def forward(self, x):
+        """
+        Args:
+        
+        x: Batch of sentences
+        """
+        
+        # embedding
+        embed = self.embedding(x)
+        embed = embed.permute(0, 2, 1)
+        embed = self.spatial_dropout(embed)
+        embed = embed.permute(0, 2, 1)
+        
+        # fwd seq
+        fwd_seq = F.pad(embed, (0, 0, 1, 0, 0, 0))[:, :-1, :]
+        
+        # pass through lstm layer
+        lout, _ = self.lstm(fwd_seq)
+        
+        # rev seq
+        rev_seq = F.pad(embed, (0, 0, 1, 0, 0, 0))[:, 1:, :]
+        rev_seq = torch.flip(rev_seq, [1])
+        
+        rout, _ = self.lstm(rev_seq)
+        rout    = torch.flip(rout, [1])
+        
+        # word representation
+        w_repr  = torch.cat((lout, embed, rout), dim=2)
+        
+        # time distributed dense layer
+        out     = self.td_dense(w_repr)
+        
+        # pass it through relu activation
+        out     = self.tanh(out)
+        
+        # text representation
+        t_repr, _ = out.max(dim=1)
+        
+        t_repr    = self.dropout(t_repr)
+        
+        out       = self.fc(t_repr)
+        
+        return out
+
+
 def get_exp2_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment2(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
                         vocab_size=len(token_to_id),
@@ -1236,6 +1314,15 @@ def get_exp15_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
 
 def get_exp16_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
     model = Experiment16(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
+                        vocab_size=len(token_to_id),
+                        embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
+                        hidden_size=PARAMS[exp_name]['HIDDEN_SIZE'],
+                        num_classes=6
+                        ).cuda()
+    return model
+
+def get_exp17_model(embedding_matrix, token_to_id, exp_name, PAD_IX):
+    model = Experiment17(pre_trained_embeddings=torch.FloatTensor(embedding_matrix),
                         vocab_size=len(token_to_id),
                         embed_size=PARAMS[exp_name]['EMBEDDING_SIZE'],
                         hidden_size=PARAMS[exp_name]['HIDDEN_SIZE'],
