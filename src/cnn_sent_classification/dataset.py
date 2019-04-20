@@ -72,7 +72,6 @@ class TextLMData():
         
         # full training and test prediction
         else:
-            print('Full Traning and Test Prediction')
             self.trn_ds  = (self.ntokens[:len(self.df)], self.df.loc[:, self.label_cols].values)
             self.vld_ds  = ([], [])
             self.tst_ds  = (self.ntokens[len(self.df):], [])
@@ -145,7 +144,7 @@ def make_iterator(config, vocab, trn_ds, vld_ds, tst_ds):
     trn_dl = DataLoader(trn_ds, batch_size=config['batch_size'], shuffle=True, collate_fn=collate_fn, num_workers=config['ncpus'])
     vld_dl, tst_dl = None, None
 
-    if len(vld_ds) > 0: vld_dl = DataLoader(vld_ds, batch_size=config['batch_size'], shuffle=True, collate_fn=collate_fn, num_workers=config['ncpus'])
-    if len(tst_ds) > 0: tst_dl = DataLoader(tst_ds, batch_size=config['batch_size'], shuffle=True, collate_fn=collate_fn, num_workers=config['ncpus'])
+    if len(vld_ds) > 0: vld_dl = DataLoader(vld_ds, batch_size=config['batch_size'], shuffle=False, collate_fn=collate_fn, num_workers=config['ncpus'])
+    if len(tst_ds) > 0: tst_dl = DataLoader(tst_ds, batch_size=config['batch_size'], shuffle=False, collate_fn=collate_fn, num_workers=config['ncpus'])
     
     return trn_dl, vld_dl, tst_dl
