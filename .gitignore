@@ -94,3 +94,4 @@ fastai
 fastai_docs
 submissions/*
 notebooks/*.csv
+notebooks/exp/
