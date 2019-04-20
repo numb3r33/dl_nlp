@@ -90,3 +90,7 @@ target/
 
 models/*
 */submissions/*
+fastai
+fastai_docs
+submissions/*
+notebooks/*.csv
