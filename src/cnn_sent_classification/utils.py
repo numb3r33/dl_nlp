@@ -3,8 +3,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 import gc
+import time
 import gensim.models.keyedvectors as word2vec
-from exp_config import config
+from exp_config import W2V_PATH, FASTTEXT_PATH, PAD_TOKEN
 
 __all__ = ['check_labels', 'load_w2v_embedding', 'pad_collate']
 
@@ -13,7 +14,7 @@ def check_labels(y): return all(v is None for v in y)
 
 
 def load_w2v_embedding(emb_matrix, vocab, embed_size):
-    word2vec_dict   = word2vec.KeyedVectors.load_word2vec_format(config['w2v_path'], binary=True)
+    word2vec_dict   = word2vec.KeyedVectors.load_word2vec_format(W2V_PATH, binary=True)
     embedding_index = dict()
     
     for word in word2vec_dict.wv.vocab:
@@ -32,7 +33,7 @@ def load_w2v_embedding(emb_matrix, vocab, embed_size):
     gc.collect()
 
     # fill pad token with all zeros
-    emb_matrix[vocab.stoi[config['PAD']]] = np.zeros(embed_size)
+    emb_matrix[vocab.stoi[PAD_TOKEN]] = np.zeros(embed_size)
     print('total embedded {} common words'.format(embed_cnt))
     
     return emb_matrix
@@ -42,7 +43,7 @@ def load_fasttext_embedding(emb_matrix, vocab, embed_size):
     def get_coefs(word, *arr):
         return word, np.asarray(arr, dtype=np.float32)
     
-    EMB_FILE        = config['fasttext_path']
+    EMB_FILE        = FASTTEXT_PATH
     embedding_index = dict()
     
     with open(EMB_FILE, 'r') as f:
@@ -65,7 +66,7 @@ def load_fasttext_embedding(emb_matrix, vocab, embed_size):
     gc.collect()
 
     # fill pad token with all zeros
-    emb_matrix[vocab.stoi[config['PAD']]] = np.zeros(embed_size)
+    emb_matrix[vocab.stoi[PAD_TOKEN]] = np.zeros(embed_size)
     print('total embedded {} common words'.format(embed_cnt))
     
     return emb_matrix
@@ -89,3 +90,4 @@ def pad_collate(data, pad_idx, sent_len):
 
 def read_csv(fn): return pd.read_csv(fn)
 def load_model(mp): return torch.load(mp)
+def readable_time(): return time.strftime('%X')

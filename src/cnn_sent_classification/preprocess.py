@@ -1,6 +1,6 @@
 import spacy
 from collections import Counter, defaultdict
-
+from exp_config import PAD_TOKEN
 
 class Tokenizer():
     def __init__(self, lang='en'):
@@ -37,6 +37,6 @@ class Vocab():
     
     @classmethod
     def add_special_symbols(cls, itos):
-        pad_sym = 'xxxpad'  # TODO: make sure we use config to introduce this symbol
+        pad_sym = PAD_TOKEN 
         itos.append(pad_sym)
         return itos

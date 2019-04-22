@@ -7,7 +7,7 @@ import time
 
 from sklearn.metrics import roc_auc_score
 from sklearn.externals import joblib
-from utils import check_labels
+from utils import check_labels, readable_time
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -128,6 +128,7 @@ def learn(model, trn_dl, vld_dl, vocab, config):
 
     N_EPOCHS        = config['N_EPOCHS']
     best_valid_loss = float('inf')
+    time_identifier = readable_time()
 
     for epoch in range(N_EPOCHS):
         start_time = time.time()
@@ -146,7 +147,8 @@ def learn(model, trn_dl, vld_dl, vocab, config):
                 
                 print('Saving best model found so far to disk')
                 # save model to results directory
-                torch.save(model.state_dict(), config['result_dir'] + config['model_name'] + '.pth')
+                torch.save(model.state_dict(), config['result_dir'] + config['model_name'] + time_identifier  +'.pth')
+                joblib.dump(config, config['result_dir'] + config['model_name'] + 'config_' + time_identifier + '.pkl')
     
             print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
             print(f'\tTrain Loss: {train_loss:.3f} | Train AUC: {train_auc:.3f}')
@@ -157,8 +159,9 @@ def learn(model, trn_dl, vld_dl, vocab, config):
     
     # save full trained model to disk
     if vld_dl is None:
-        torch.save(model.dict(), config['result_dir'] + config['model_name'] + '_full.pth')
-
+        torch.save(model.dict(), config['result_dir'] + config['model_name'] + time_identifier +'_full.pth')
+        joblib.dump(config, config['result_dir'] + config['model_name'] + 'config_full' + time_identifier + '.pkl')
+    
     return model
 
 
@@ -170,4 +173,3 @@ def predictions(model, tst_dl, criterion, test_labels, fn):
     df.to_csv(fn, index=False)
 
     return df
-

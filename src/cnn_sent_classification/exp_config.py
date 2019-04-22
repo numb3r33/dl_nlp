@@ -1,32 +1,23 @@
+PAD_TOKEN = 'xxxpad'
+W2V_PATH  = '../../data/processed/word2vec.bin.gz'
+FASTTEXT_PATH =  '../../data/processed/crawl-300d-2M.vec'
+TEXT_COL   = 'comment_text'
+LABEL_COLS = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
+
 config = {
     'lr': 1e-2,
     'sent_len': 200,
-    #'path': '../../data/raw/',
-    'path': '../../data/processed/',
     'emb_type': 'glove',
     #'emb_type': 'fasttext',
-    'csv': 'sample.csv',
-    #'csv': 'train.csv',
-    #'text_col': 'comment_text',
-    #'label_cols': ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate'],
-    'text_col': 'text',
-    'label_cols': ['t1', 't2', 't3', 't4', 't5', 't6'],
     'dropout': 0.1,
     'spatial_dropout': 0.4,
-    'test_csv': None,
-    #'test_csv': 'test.csv',
     'max_vocab' : 100000,
     'min_freq'  : 3,
     'embed_size' : 300,
     'valid_pct'  : 0.2,
     'n_filters': [32, 32, 32, 32],
     'filter_size': [1, 2, 3, 5],
-    'PAD': 'xxxpad',
     'ncpus': 8,
     'batch_size': 512,
-    'N_EPOCHS': 2,
-    'w2v_path': '../../data/processed/word2vec.bin.gz',
-    'fasttext_path': '../../data/processed/crawl-300d-2M.vec',
-    #'test_labels_path': '../../data/raw/test_labels.csv',
-    'test_labels_path': '../../data/processed/sample_test.csv',
-}
+    'N_EPOCHS': 2
+    }

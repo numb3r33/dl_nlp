@@ -7,6 +7,7 @@ from preprocess import Tokenizer, Vocab
 from utils import check_labels, load_w2v_embedding, load_fasttext_embedding, pad_collate
 from torch.utils.data import Dataset, DataLoader
 from functools import partial
+from exp_config import TEXT_COL, LABEL_COLS, PAD_TOKEN
 
 
 class TextLMData():  
@@ -109,8 +110,8 @@ def make_dataset(config):
 
     path       = Path(config['path'])
     csv        = config['csv']
-    text_col   = config['text_col'] 
-    label_cols = config['label_cols']
+    text_col   = TEXT_COL 
+    label_cols = LABEL_COLS
     test_csv   = config['test_csv']
     max_vocab  = config['max_vocab']
     min_freq   = config['min_freq']
@@ -135,7 +136,7 @@ def make_dataset(config):
 
 def make_iterator(config, vocab, trn_ds, vld_ds, tst_ds):
     sent_len   = config['sent_len']
-    collate_fn = partial(pad_collate, pad_idx=vocab.stoi[config['PAD']], sent_len=sent_len)
+    collate_fn = partial(pad_collate, pad_idx=vocab.stoi[PAD_TOKEN], sent_len=sent_len)
     
     trn_ds     = TextClassData(vocab, trn_ds)
     if len(vld_ds) > 0: vld_ds = TextClassData(vocab, vld_ds)
