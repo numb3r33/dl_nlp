@@ -6,6 +6,7 @@ import torch.optim as optim
 import time
 
 from sklearn.metrics import roc_auc_score
+from sklearn.externals import joblib
 from utils import check_labels
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -80,7 +81,9 @@ def evaluate(model, iterator, criterion):
                 y    = y.to(device)
                 loss = criterion(predictions, y)
                 batch_target = y.cpu().detach().numpy()      
-                preds.append(logits_cpu.cpu().detach().numpy())
+                logits_cpu = logits_cpu.cpu().detach().numpy()
+
+                preds.append(logits_cpu)
 
                 # per_label_preds
                 for j in range(6):
@@ -139,6 +142,11 @@ def learn(model, trn_dl, vld_dl, vocab, config):
         if vld_dl is not None:
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
+                best_model      = model
+                
+                print('Saving best model found so far to disk')
+                # save model to results directory
+                torch.save(model.state_dict(), config['result_dir'] + config['model_name'] + '.pth')
     
             print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
             print(f'\tTrain Loss: {train_loss:.3f} | Train AUC: {train_auc:.3f}')
@@ -147,6 +155,10 @@ def learn(model, trn_dl, vld_dl, vocab, config):
             print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
             print(f'\tTrain Loss: {train_loss:.3f} | Train AUC: {train_auc:.3f}')
     
+    # save full trained model to disk
+    if vld_dl is None:
+        torch.save(model.dict(), config['result_dir'] + config['model_name'] + '_full.pth')
+
     return model
 
 

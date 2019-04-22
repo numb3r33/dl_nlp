@@ -4,13 +4,13 @@ from exp_config import config
 from models.model_utils import make_model
 from learner import learn, predictions
 from dataset import make_dataset, make_iterator
-from utils import read_csv
+from utils import read_csv, load_model
 
 dir = os.path.dirname(os.path.realpath(__file__))
 
 
 def main(*args):
-    full_search, dry_run, infer, model_name, best, result_dir, sub_fn_path = args
+    full_search, dry_run, infer, model_name, best, result_dir, sub_fn_path, load = args
 
     if full_search:
         pass
@@ -26,7 +26,15 @@ def main(*args):
             config['emb_matrix']                 = emb_matrix
             
             model = make_model(config)
-            model = learn(model, trn_dl, vld_dl, vocab, config)
+
+            # load model from disk from previous iteration and just 
+            if load:
+                print('Loading model from disk from {}'.format(config['result_dir'] + config['model_name'] + '.pth'))
+
+                model_dict = load_model(config['result_dir'] + config['model_name'] + '.pth')
+                model      = model.load_state_dict(model_dict)
+            else:
+                model = learn(model, trn_dl, vld_dl, vocab, config)
 
         else:
             vocab, trn_ds, _, tst_ds, emb_matrix = make_dataset(config)
@@ -36,9 +44,16 @@ def main(*args):
             config['emb_matrix']                 = emb_matrix
 
             model = make_model(config)
-            model = learn(model, trn_dl, _, vocab, config)
-            test_labels = read_csv(config['test_labels_path'])
+
+            if load:
+                print('Loading model from disk from {}'.format(config['result_dir'] + config['model_name'] + '_full.pth'))
+
+                model_dict  = load_model(config['result_dir'] + config['model_name'] + '_full.pth')
+                model       = model.load_state_dict(model_dict)
+            else:
+                model = learn(model, trn_dl, _, vocab, config)
             
+            test_labels = read_csv(config['test_labels_path'])
             _  = predictions(model, tst_dl, None, test_labels, sub_fn_path)
 
 
@@ -52,6 +67,7 @@ if __name__ == '__main__':
     parser.add_argument('-best', type=bool, help='Force to use the best known configuration.')
     parser.add_argument('-result_dir', type=str, help='Name of the directory to store/load model.')
     parser.add_argument('-sub_path', type=str, help='Full path of submission file.')
+    parser.add_argument('-load', type=bool, help='Whether to load the model from disk or not.')
 
     args = parser.parse_args()
 
@@ -62,5 +78,6 @@ if __name__ == '__main__':
     best        = args.best
     result_dir  = args.result_dir
     sub_fn_path = args.sub_path
+    load        = args.load
 
-    main(full_search, dry_run, infer, model_name, best, result_dir, sub_fn_path)
+    main(full_search, dry_run, infer, model_name, best, result_dir, sub_fn_path, load)

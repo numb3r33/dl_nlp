@@ -88,3 +88,4 @@ def pad_collate(data, pad_idx, sent_len):
 
 
 def read_csv(fn): return pd.read_csv(fn)
+def load_model(mp): return torch.load(mp)
