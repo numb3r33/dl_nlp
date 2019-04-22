@@ -5,7 +5,7 @@ import numpy as np
 import gc
 import time
 import gensim.models.keyedvectors as word2vec
-from exp_config import W2V_PATH, FASTTEXT_PATH, PAD_TOKEN
+from exp_config import W2V_PATH, FASTTEXT_PATH, PAD_TOKEN, UNK_TOKEN
 
 __all__ = ['check_labels', 'load_w2v_embedding', 'pad_collate']
 
@@ -33,7 +33,8 @@ def load_w2v_embedding(emb_matrix, vocab, embed_size):
     gc.collect()
 
     # fill pad token with all zeros
-    emb_matrix[vocab.stoi[PAD_TOKEN]] = np.zeros(embed_size)
+    emb_matrix[vocab.stoi[PAD_TOKEN]] = np.zeros(embed_size) 
+    emb_matrix[vocab.stoi[UNK_TOKEN]] = np.zeros(embed_size)
     print('total embedded {} common words'.format(embed_cnt))
     
     return emb_matrix
@@ -67,6 +68,7 @@ def load_fasttext_embedding(emb_matrix, vocab, embed_size):
 
     # fill pad token with all zeros
     emb_matrix[vocab.stoi[PAD_TOKEN]] = np.zeros(embed_size)
+    emb_matrix[vocab.stoi[UNK_TOKEN]] = np.zeros(embed_size)
     print('total embedded {} common words'.format(embed_cnt))
     
     return emb_matrix

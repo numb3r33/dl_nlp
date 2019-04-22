@@ -147,7 +147,7 @@ def learn(model, trn_dl, vld_dl, vocab, config):
                 
                 print('Saving best model found so far to disk')
                 # save model to results directory
-                torch.save(model.state_dict(), config['result_dir'] + config['model_name'] + time_identifier  +'.pth')
+                torch.save(model.state_dict(), config['result_dir'] + config['model_name'] + '_' + time_identifier  +'.pth')
                 joblib.dump(config, config['result_dir'] + config['model_name'] + 'config_' + time_identifier + '.pkl')
     
             print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
@@ -159,7 +159,7 @@ def learn(model, trn_dl, vld_dl, vocab, config):
     
     # save full trained model to disk
     if vld_dl is None:
-        torch.save(model.dict(), config['result_dir'] + config['model_name'] + time_identifier +'_full.pth')
+        torch.save(model.state_dict(), config['result_dir'] + config['model_name'] + '_' + time_identifier +'_full.pth')
         joblib.dump(config, config['result_dir'] + config['model_name'] + 'config_full' + time_identifier + '.pkl')
     
     return model

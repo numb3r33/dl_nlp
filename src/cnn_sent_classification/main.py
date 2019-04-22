@@ -1,6 +1,7 @@
 import os
 import argparse
-from exp_config import config
+from exp_config import config as global_config
+from exp_config import PAD_TOKEN
 from models.model_utils import make_model
 from learner import learn, predictions
 from dataset import make_dataset, make_iterator
@@ -10,8 +11,9 @@ dir = os.path.dirname(os.path.realpath(__file__))
 
 
 def main(*args):
-    path, csv, test_csv, test_labels, identifier, infer, model_name, result_dir, sub_fn_path, load = args
-
+    path, csv, test_csv, test_labels, identifier, infer, model_name, result_dir, sub_fn_path, load, exp_name = args
+    
+    config                = global_config[exp_name]
     config['path']        = path
     config['csv']         = csv
     config['test_csv']    = test_csv
@@ -25,7 +27,8 @@ def main(*args):
         trn_dl, vld_dl, _                    = make_iterator(config, vocab, trn_ds, vld_ds, _)
         
         config['vocab_size']                 = len(vocab.itos)
-        
+        config['pad_idx']                    = vocab.stoi[PAD_TOKEN]
+
         model = make_model(config, emb_matrix)
 
         # load model from disk from previous iteration and just 
@@ -43,6 +46,7 @@ def main(*args):
         
         config['vocab_size']                 = len(vocab.itos)
         config['emb_matrix']                 = emb_matrix
+        config['pad_idx']                    = vocab.stoi[PAD_TOKEN]
 
         model = make_model(config, emb_matrix)
 
@@ -54,7 +58,7 @@ def main(*args):
         else:
             model = learn(model, trn_dl, _, vocab, config)
         
-        test_labels = read_csv(config['test_labels_path'])
+        test_labels = read_csv(config['test_labels'])
         _  = predictions(model, tst_dl, None, test_labels, sub_fn_path)
 
 
@@ -71,6 +75,7 @@ if __name__ == '__main__':
     parser.add_argument('-result_dir', type=str, help='Name of the directory to store/load model.')
     parser.add_argument('-sub_path', type=str, help='Full path of submission file.')
     parser.add_argument('-load', type=bool, help='Whether to load the model from disk or not.')
+    parser.add_argument('-exp_name', type=str, help='Name of the experiment.')
 
     args = parser.parse_args()
 
@@ -84,5 +89,6 @@ if __name__ == '__main__':
     result_dir  = args.result_dir
     sub_fn_path = args.sub_path
     load        = args.load
+    exp_name    = args.exp_name
 
-    main(path, csv, test_csv, test_labels, identifier, infer, model_name, result_dir, sub_fn_path, load)
+    main(path, csv, test_csv, test_labels, identifier, infer, model_name, result_dir, sub_fn_path, load, exp_name)

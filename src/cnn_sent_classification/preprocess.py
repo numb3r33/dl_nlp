@@ -1,6 +1,6 @@
 import spacy
 from collections import Counter, defaultdict
-from exp_config import PAD_TOKEN
+from exp_config import PAD_TOKEN, UNK_TOKEN
 
 class Tokenizer():
     def __init__(self, lang='en'):
@@ -16,7 +16,7 @@ class Vocab():
         self.stoi = defaultdict(int, {v: k for k, v in enumerate(self.itos)})
     
     def numericalize(self, t):
-        return [self.stoi[w] for w in t]
+        return [self.stoi.get(w, self.stoi[UNK_TOKEN]) for w in t]
     
     def fix_len(self, sent_len, numericalized_tokens):
         return [nt[:sent_len] for nt in numericalized_tokens]
@@ -37,6 +37,8 @@ class Vocab():
     
     @classmethod
     def add_special_symbols(cls, itos):
-        pad_sym = PAD_TOKEN 
+        pad_sym = PAD_TOKEN
+        unk_sym = UNK_TOKEN
         itos.append(pad_sym)
+        itos.append(unk_sym)
         return itos
