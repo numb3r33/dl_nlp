@@ -2,8 +2,9 @@ import torch
 
 from .cnn_model import CNNModel
 from .simple_cnn import SimpleCNN
+from .rcnn import RCNN
 
-__all__ = ['CNNModel', 'SimpleCNN']
+__all__ = ['CNNModel', 'SimpleCNN', 'RCNN']
 
 
 def make_model(config, emb_matrix):

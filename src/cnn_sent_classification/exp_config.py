@@ -21,5 +21,23 @@ config = {
         'ncpus': 8,
         'batch_size': 128,
         'N_EPOCHS': 2
+         },
+    'rcnn': {
+        'lr': 1e-3,
+        'sent_len': 200,
+        'emb_type': 'fasttext',
+        'dropout': 0.3,
+        'spatial_dropout': 0.3,
+        'max_vocab' : 100000,
+        'min_freq'  : 3,
+        'embed_size' : 300,
+        'valid_pct'  : 0.2,
+        'n_filters': 32,
+        'hidden_size': 300,
+        'filter_size': 1,
+        'ncpus': 8,
+        'batch_size': 128,
+        'N_EPOCHS': 2
          }
+
     }
